@@ -26,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -38,6 +39,7 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.firebase.ui.auth.AuthUI;
+import com.firebase.ui.auth.ErrorCodes;
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract;
 import com.firebase.ui.auth.IdpResponse;
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult;
@@ -147,7 +149,6 @@ public class MainActivity extends AppCompatActivity {
         mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                // TODO: Send messages on click
                 FriendlyMessage friendlyMessage = new FriendlyMessage(mMessageEditText.getText().toString(), mUsername, null);
                 mMessagesDatabaseReference.push().setValue(friendlyMessage);
 
@@ -184,18 +185,25 @@ public class MainActivity extends AppCompatActivity {
         };
     }
 
+    //Receives the result from the AuthStateLi
     private void onSignInResult(FirebaseAuthUIAuthenticationResult result) {
         IdpResponse response = result.getIdpResponse();
         if (result.getResultCode() == RESULT_OK) {
             // Successfully signed in
             FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-            Toast.makeText(MainActivity.this, "You're now signed in", Toast.LENGTH_SHORT).show();
-            // ...
+            Toast.makeText(MainActivity.this, "Welcome " + user.getDisplayName(), Toast.LENGTH_SHORT).show();
+
         } else {
-            // Sign in failed. If response is null the user canceled the
-            // sign-in flow using the back button. Otherwise check
-            // response.getError().getErrorCode() and handle the error.
-            // ...
+            // Sign in failed. If response is null the user canceled the sign in flow using the back button
+            if (response == null) {
+                Toast.makeText(MainActivity.this, "Sign in cancelled"  , Toast.LENGTH_SHORT).show();
+                finish();
+            }
+            if (response.getError().getErrorCode() == ErrorCodes.NO_NETWORK) {
+                Toast.makeText(MainActivity.this, "No internet"  , Toast.LENGTH_SHORT).show();
+                finish();
+            }
+            Log.e(TAG, "Sign-in error: ", response.getError());
         }
     }
 
@@ -258,7 +266,14 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        return super.onOptionsItemSelected(item);
+        switch (item.getItemId()){
+            case R.id.sign_out_menu:
+                //Sign out using FirebaseUI Auth method
+                AuthUI.getInstance().signOut(this);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override
